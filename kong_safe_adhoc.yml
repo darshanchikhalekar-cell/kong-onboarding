@@ -31,10 +31,13 @@
           - kong status
           - curl http://localhost:8001/status
       when: >
-        allowed_commands
-        | select('match', kong_cmd)
-        | list
-        | length == 0
+        not (
+          allowed_commands
+          | map('regex_search', kong_cmd)
+          | select('string')
+          | list
+          | length > 0
+        )
 
     - name: Run safe Kong command
       shell: "{{ kong_cmd }}"
