@@ -21,7 +21,7 @@
         status_code: 200
         headers: "{{ kong_headers }}"
 
-    - name: Create consumer (idempotent)
+    - name: Create consumer (safe & idempotent)
       uri:
         url: "{{ kong_admin_url }}/consumers"
         method: POST
@@ -31,28 +31,18 @@
           username: "{{ consumer_username }}"
         headers: "{{ kong_headers }}"
 
-    - name: Check existing API keys
-      uri:
-        url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/key-auth"
-        method: GET
-        status_code: 200
-        headers: "{{ kong_headers }}"
-      register: existing_keys
-
-    - name: Create API key if none exists
+    - name: Create API key (safe for new & existing consumer)
       uri:
         url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/key-auth"
         method: POST
         status_code: [201, 409]
         body_format: json
         headers: "{{ kong_headers }}"
-      when:
-        - existing_keys.json.data is defined
-        - existing_keys.json.data | length == 0
+      register: key_result
 
     - name: Onboarding summary
       debug:
         msg: |
-          Consumer '{{ consumer_username }}' onboarded successfully.
+          Consumer: {{ consumer_username }}
           Workspace: {{ kong_workspace }}
-          API key status: {{ 'CREATED' if existing_keys.json.data | length == 0 else 'ALREADY EXISTS' }}
+          API Key: {{ 'CREATED' if key_result.status == 201 else 'ALREADY EXISTS' }}
