@@ -7,7 +7,6 @@
   vars:
     kong_cmd: ""
 
-    # Allowed commands (whitelist)
     allowed_commands:
       - "^kong health$"
       - "^kong version$"
@@ -43,7 +42,7 @@
       changed_when: false
 
     - name: Show command output
-      debug:git
+      debug:
         msg: |
           Command executed: {{ kong_cmd }}
           Output:
