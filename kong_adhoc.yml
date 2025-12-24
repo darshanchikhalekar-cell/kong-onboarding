@@ -1,0 +1,31 @@
+---
+- name: Run unrestricted ad-hoc command (AWX container)
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    adhoc_cmd: ""
+
+  tasks:
+
+    - name: Fail if no command provided
+      fail:
+        msg: "You must provide adhoc_cmd when launching the job"
+      when: adhoc_cmd | length == 0
+
+    - name: Run ad-hoc command
+      shell: "{{ adhoc_cmd }}"
+      register: cmd_output
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Show command result
+      debug:
+        msg: |
+          Command: {{ adhoc_cmd }}
+          Return code: {{ cmd_output.rc }}
+          STDOUT:
+          {{ cmd_output.stdout | default('') }}
+          STDERR:
+          {{ cmd_output.stderr | default('') }}
