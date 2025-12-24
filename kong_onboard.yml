@@ -5,7 +5,7 @@
   gather_facts: no
 
   vars:
-    kong_admin_url: "http://host.docker.internal:8001"
+    kong_admin_url: "http://192.168.64.130:8001"
     consumer_username: "{{ customer_name }}"
     acl_group: "{{ customer_tier | default('standard') }}"
 
