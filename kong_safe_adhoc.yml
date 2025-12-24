@@ -1,0 +1,50 @@
+---
+- name: Run SAFE ad-hoc Kong commands
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    kong_cmd: ""
+
+    # Allowed commands (whitelist)
+    allowed_commands:
+      - "^kong health$"
+      - "^kong version$"
+      - "^kong status$"
+      - "^curl http://localhost:8001/status$"
+      - "^curl http://127.0.0.1:8001/status$"
+
+  tasks:
+
+    - name: Fail if no command provided
+      fail:
+        msg: "You must provide kong_cmd when launching the job"
+      when: kong_cmd | length == 0
+
+    - name: Validate command is allowed
+      fail:
+        msg: |
+          Command '{{ kong_cmd }}' is NOT allowed.
+          Allowed commands are:
+          - kong health
+          - kong version
+          - kong status
+          - curl http://localhost:8001/status
+      when: >
+        allowed_commands
+        | select('match', kong_cmd)
+        | list
+        | length == 0
+
+    - name: Run safe Kong command
+      shell: "{{ kong_cmd }}"
+      register: kong_cmd_output
+      changed_when: false
+
+    - name: Show command output
+      debug:git
+        msg: |
+          Command executed: {{ kong_cmd }}
+          Output:
+          {{ kong_cmd_output.stdout }}
