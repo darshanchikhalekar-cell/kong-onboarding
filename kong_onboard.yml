@@ -1,23 +1,23 @@
 ---
-- name: Onboard customer to Kong
+- name: Create Kong consumer and API key
   hosts: localhost
   connection: local
   gather_facts: no
 
   vars:
+    # IMPORTANT: use your VM IP (AWX runs inside container)
     kong_admin_url: "http://192.168.64.130:8001"
     consumer_username: "{{ customer_name }}"
-    acl_group: "{{ customer_tier | default('standard') }}"
 
   tasks:
 
-    - name: Ensure Kong is reachable
+    - name: Check Kong Admin API is reachable
       uri:
         url: "{{ kong_admin_url }}/status"
         method: GET
         status_code: 200
 
-    - name: Create Kong consumer (idempotent)
+    - name: Create consumer (idempotent)
       uri:
         url: "{{ kong_admin_url }}/consumers"
         method: POST
@@ -37,23 +37,14 @@
       uri:
         url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/key-auth"
         method: POST
-        status_code: 201
-        body_format: json
-      when: existing_keys.json.data | length == 0
-      register: new_key
-
-    - name: Assign ACL group (idempotent)
-      uri:
-        url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/acls"
-        method: POST
         status_code: [201, 409]
         body_format: json
-        body:
-          group: "{{ acl_group }}"
+      when:
+        - existing_keys.json.data is defined
+        - existing_keys.json.data | length == 0
 
     - name: Onboarding summary
       debug:
         msg: |
-          Customer '{{ consumer_username }}' onboarded successfully.
-          ACL Group: {{ acl_group }}
-          API Key: {{ 'CREATED' if new_key is defined else 'ALREADY EXISTS' }}
+          Consumer '{{ consumer_username }}' is ready.
+          API key: {{ 'CREATED' if (existing_keys.json.data | length == 0) else 'ALREADY EXISTS' }}
