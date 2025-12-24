@@ -1,0 +1,59 @@
+---
+- name: Onboard customer to Kong
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    kong_admin_url: "http://127.0.0.1:8001"
+    consumer_username: "{{ customer_name }}"
+    acl_group: "{{ customer_tier | default('standard') }}"
+
+  tasks:
+
+    - name: Ensure Kong is reachable
+      uri:
+        url: "{{ kong_admin_url }}/status"
+        method: GET
+        status_code: 200
+
+    - name: Create Kong consumer (idempotent)
+      uri:
+        url: "{{ kong_admin_url }}/consumers"
+        method: POST
+        status_code: [201, 409]
+        body_format: json
+        body:
+          username: "{{ consumer_username }}"
+
+    - name: Check existing API keys
+      uri:
+        url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/key-auth"
+        method: GET
+        status_code: 200
+      register: existing_keys
+
+    - name: Create API key if none exists
+      uri:
+        url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/key-auth"
+        method: POST
+        status_code: 201
+        body_format: json
+      when: existing_keys.json.data | length == 0
+      register: new_key
+
+    - name: Assign ACL group (idempotent)
+      uri:
+        url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/acls"
+        method: POST
+        status_code: [201, 409]
+        body_format: json
+        body:
+          group: "{{ acl_group }}"
+
+    - name: Onboarding summary
+      debug:
+        msg: |
+          Customer '{{ consumer_username }}' onboarded successfully.
+          ACL Group: {{ acl_group }}
+          API Key: {{ 'CREATED' if new_key is defined else 'ALREADY EXISTS' }}
