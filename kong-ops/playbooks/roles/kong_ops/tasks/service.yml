@@ -1,11 +1,24 @@
-- name: Start Kong (Docker)
-  shell: docker start {{ kong_container_name }}
+# -------------------------------
+# Kong Service Operations (CLI)
+# -------------------------------
+
+- name: Start Kong
+  shell: kong start
+  become: yes
   when: kong_action == 'kong_start'
+  tags:
+    - kong_start
 
-- name: Stop Kong (Docker)
-  shell: docker stop {{ kong_container_name }}
+- name: Stop Kong
+  shell: kong stop
+  become: yes
   when: kong_action == 'kong_stop'
+  tags:
+    - kong_stop
 
-- name: Restart Kong (Docker)
-  shell: docker restart {{ kong_container_name }}
+- name: Restart Kong
+  shell: kong restart
+  become: yes
   when: kong_action == 'kong_restart'
+  tags:
+    - kong_restart
