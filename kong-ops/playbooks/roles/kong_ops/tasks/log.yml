@@ -4,16 +4,23 @@
     state: directory
     mode: '0755'
 
-- name: Fetch access logs
+- name: Fetch proxy access logs
   fetch:
-    src: "{{ kong_log_dir }}/access.log"
+    src: /usr/local/kong/logs/access.log
     dest: "{{ fetch_dir }}/"
     flat: yes
   when: kong_action == 'access_logs'
 
-- name: Fetch error logs
+- name: Fetch proxy error logs
   fetch:
-    src: "{{ kong_log_dir }}/error.log"
+    src: /usr/local/kong/logs/error.log
     dest: "{{ fetch_dir }}/"
     flat: yes
   when: kong_action == 'error_logs'
+
+- name: Fetch admin access logs
+  fetch:
+    src: /usr/local/kong/logs/admin_access.log
+    dest: "{{ fetch_dir }}/"
+    flat: yes
+  when: kong_action == 'admin_access_logs'
