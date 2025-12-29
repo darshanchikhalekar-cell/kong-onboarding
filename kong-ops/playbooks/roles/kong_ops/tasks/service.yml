@@ -1,17 +1,11 @@
-- name: Start Kong
-  service:
-    name: "{{ kong_service }}"
-    state: started
+- name: Start Kong (Docker)
+  shell: docker start {{ kong_container_name }}
   when: kong_action == 'kong_start'
 
-- name: Stop Kong
-  service:
-    name: "{{ kong_service }}"
-    state: stopped
+- name: Stop Kong (Docker)
+  shell: docker stop {{ kong_container_name }}
   when: kong_action == 'kong_stop'
 
-- name: Restart Kong
-  service:
-    name: "{{ kong_service }}"
-    state: restarted
+- name: Restart Kong (Docker)
+  shell: docker restart {{ kong_container_name }}
   when: kong_action == 'kong_restart'
