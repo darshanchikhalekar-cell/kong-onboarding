@@ -1,0 +1,15 @@
+- name: Service operations
+  include_tasks: service.yml
+  when: kong_action in ['kong_start', 'kong_stop', 'kong_restart']
+
+- name: Log operations
+  include_tasks: log.yml
+  when: kong_action in ['access_logs', 'error_logs']
+
+- name: License operation
+  include_tasks: license.yml
+  when: kong_action == 'fetch_license'
+
+- name: Config operation
+  include_tasks: config.yml
+  when: kong_action == 'kong_config'
