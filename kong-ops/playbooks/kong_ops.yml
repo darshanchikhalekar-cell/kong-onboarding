@@ -1,0 +1,5 @@
+- name: Kong Operations via AWX
+  hosts: kong
+  become: yes
+  roles:
+    - kong_ops

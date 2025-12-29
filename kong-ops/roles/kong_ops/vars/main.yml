@@ -1,0 +1,5 @@
+kong_service: kong
+kong_log_dir: /usr/local/kong/logs
+kong_license_path: /etc/kong/license.json
+kong_conf_path: /etc/kong/kong.conf
+fetch_dir: /tmp/kong_fetch

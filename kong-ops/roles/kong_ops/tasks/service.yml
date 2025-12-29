@@ -1,0 +1,17 @@
+- name: Start Kong
+  service:
+    name: "{{ kong_service }}"
+    state: started
+  when: action == 'kong_start'
+
+- name: Stop Kong
+  service:
+    name: "{{ kong_service }}"
+    state: stopped
+  when: action == 'kong_stop'
+
+- name: Restart Kong
+  service:
+    name: "{{ kong_service }}"
+    state: restarted
+  when: action == 'kong_restart'

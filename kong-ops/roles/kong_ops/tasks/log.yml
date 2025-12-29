@@ -1,0 +1,19 @@
+- name: Ensure fetch directory exists
+  file:
+    path: "{{ fetch_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Fetch access logs
+  fetch:
+    src: "{{ kong_log_dir }}/access.log"
+    dest: "{{ fetch_dir }}/"
+    flat: yes
+  when: action == 'access_logs'
+
+- name: Fetch error logs
+  fetch:
+    src: "{{ kong_log_dir }}/error.log"
+    dest: "{{ fetch_dir }}/"
+    flat: yes
+  when: action == 'error_logs'
