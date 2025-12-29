@@ -4,26 +4,38 @@
     state: directory
     mode: '0755'
 
-- name: Fetch proxy access logs
-  fetch:
-    src: /usr/local/kong/logs/access.log
-    dest: "{{ fetch_dir }}/"
-    flat: yes
-  become: yes
-  when: kong_action == 'access_logs'
-
-- name: Fetch proxy error logs
-  fetch:
-    src: /usr/local/kong/logs/error.log
-    dest: "{{ fetch_dir }}/"
-    flat: yes
+- name: Copy proxy error log to temp
+  shell: cp /usr/local/kong/logs/error.log /tmp/kong_error.log
   become: yes
   when: kong_action == 'error_logs'
 
-- name: Fetch admin access logs
+- name: Fetch proxy error log
   fetch:
-    src: /usr/local/kong/logs/admin_access.log
+    src: /tmp/kong_error.log
     dest: "{{ fetch_dir }}/"
     flat: yes
+  when: kong_action == 'error_logs'
+
+- name: Copy proxy access log to temp
+  shell: cp /usr/local/kong/logs/access.log /tmp/kong_access.log
   become: yes
+  when: kong_action == 'access_logs'
+
+- name: Fetch proxy access log
+  fetch:
+    src: /tmp/kong_access.log
+    dest: "{{ fetch_dir }}/"
+    flat: yes
+  when: kong_action == 'access_logs'
+
+- name: Copy admin access log to temp
+  shell: cp /usr/local/kong/logs/admin_access.log /tmp/kong_admin_access.log
+  become: yes
+  when: kong_action == 'admin_access_logs'
+
+- name: Fetch admin access log
+  fetch:
+    src: /tmp/kong_admin_access.log
+    dest: "{{ fetch_dir }}/"
+    flat: yes
   when: kong_action == 'admin_access_logs'
