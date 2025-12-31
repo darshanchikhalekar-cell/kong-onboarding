@@ -3,19 +3,25 @@
 # -------------------------------
 
 - name: Start Kong
-  shell: /usr/local/bin/kong start
+  command: /usr/local/bin/kong start
   become: yes
+  args:
+    executable: /bin/bash
   when: kong_action == 'kong_start'
   tags: kong_start
 
 - name: Stop Kong
-  shell: /usr/local/bin/kong stop
+  command: /usr/local/bin/kong stop
   become: yes
+  args:
+    executable: /bin/bash
   when: kong_action == 'kong_stop'
   tags: kong_stop
 
 - name: Restart Kong
-  shell: /usr/local/bin/kong restart
+  command: /usr/local/bin/kong restart
   become: yes
+  args:
+    executable: /bin/bash
   when: kong_action == 'kong_restart'
   tags: kong_restart
