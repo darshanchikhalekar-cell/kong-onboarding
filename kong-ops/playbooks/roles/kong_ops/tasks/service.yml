@@ -3,31 +3,16 @@
 # ---------------------------------
 
 - name: Start Kong
-  shell: |
-    source /etc/profile
-    /usr/local/bin/kong start
-  become: yes
-  args:
-    executable: /bin/bash
+  shell: sudo -i /usr/local/bin/kong start
   when: kong_action == 'kong_start'
   tags: kong_start
 
 - name: Stop Kong
-  shell: |
-    source /etc/profile
-    /usr/local/bin/kong stop
-  become: yes
-  args:
-    executable: /bin/bash
+  shell: sudo -i /usr/local/bin/kong stop
   when: kong_action == 'kong_stop'
   tags: kong_stop
 
 - name: Restart Kong
-  shell: |
-    source /etc/profile
-    /usr/local/bin/kong restart
-  become: yes
-  args:
-    executable: /bin/bash
+  shell: sudo -i /usr/local/bin/kong restart
   when: kong_action == 'kong_restart'
   tags: kong_restart
