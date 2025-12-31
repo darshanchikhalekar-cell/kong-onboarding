@@ -1,9 +1,9 @@
-# -------------------------------
+# ---------------------------------
 # Kong Service Operations (CLI)
-# -------------------------------
+# ---------------------------------
 
 - name: Start Kong
-  command: /usr/local/bin/kong start
+  shell: "/usr/local/bin/kong start"
   become: yes
   args:
     executable: /bin/bash
@@ -11,7 +11,7 @@
   tags: kong_start
 
 - name: Stop Kong
-  command: /usr/local/bin/kong stop
+  shell: "/usr/local/bin/kong stop"
   become: yes
   args:
     executable: /bin/bash
@@ -19,7 +19,7 @@
   tags: kong_stop
 
 - name: Restart Kong
-  command: /usr/local/bin/kong restart
+  shell: "/usr/local/bin/kong restart"
   become: yes
   args:
     executable: /bin/bash
