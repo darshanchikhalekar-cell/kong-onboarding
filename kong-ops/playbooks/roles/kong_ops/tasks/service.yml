@@ -3,16 +3,28 @@
 # ---------------------------------
 
 - name: Start Kong
-  shell: sudo -i /usr/local/bin/kong start
+  shell: kong start
+  become: yes
+  become_method: sudo
+  become_user: root
+  become_flags: "-i"
   when: kong_action == 'kong_start'
   tags: kong_start
 
 - name: Stop Kong
-  shell: sudo -i /usr/local/bin/kong stop
+  shell: kong stop
+  become: yes
+  become_method: sudo
+  become_user: root
+  become_flags: "-i"
   when: kong_action == 'kong_stop'
   tags: kong_stop
 
 - name: Restart Kong
-  shell: sudo -i /usr/local/bin/kong restart
+  shell: kong restart
+  become: yes
+  become_method: sudo
+  become_user: root
+  become_flags: "-i"
   when: kong_action == 'kong_restart'
   tags: kong_restart
