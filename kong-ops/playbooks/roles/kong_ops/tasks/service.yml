@@ -1,30 +1,13 @@
-# ---------------------------------
 # Kong Service Operations (FINAL)
-# ---------------------------------
 
 - name: Start Kong
-  shell: kong start
-  become: yes
-  become_method: sudo
-  become_user: root
-  become_flags: "-i"
-  when: kong_action == 'kong_start'
+  shell: /usr/local/bin/kong start
   tags: kong_start
 
 - name: Stop Kong
-  shell: kong stop
-  become: yes
-  become_method: sudo
-  become_user: root
-  become_flags: "-i"
-  when: kong_action == 'kong_stop'
+  shell: /usr/local/bin/kong stop
   tags: kong_stop
 
 - name: Restart Kong
-  shell: kong restart
-  become: yes
-  become_method: sudo
-  become_user: root
-  become_flags: "-i"
-  when: kong_action == 'kong_restart'
+  shell: /usr/local/bin/kong restart
   tags: kong_restart
