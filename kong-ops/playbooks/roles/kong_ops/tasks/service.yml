@@ -1,14 +1,16 @@
+# roles/kong_ops/tasks/service.yml
+
 - name: Stop Kong
-  shell: /usr/local/bin/kong stop
+  shell: bash -lc "/usr/local/bin/kong stop"
   when: kong_action == 'kong_stop'
   tags: kong_stop
 
 - name: Start Kong
-  shell: /usr/local/bin/kong start
+  shell: bash -lc "/usr/local/bin/kong start"
   when: kong_action == 'kong_start'
   tags: kong_start
 
 - name: Restart Kong
-  shell: /usr/local/bin/kong restart
+  shell: bash -lc "/usr/local/bin/kong restart"
   when: kong_action == 'kong_restart'
   tags: kong_restart
