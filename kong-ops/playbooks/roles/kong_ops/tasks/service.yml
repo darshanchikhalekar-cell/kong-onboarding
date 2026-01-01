@@ -1,13 +1,16 @@
-# Kong Service Operations (FINAL)
-
-- name: Start Kong
-  shell: /usr/local/bin/kong start
-  tags: kong_start
+# roles/kong_ops/tasks/service.yml
 
 - name: Stop Kong
-  shell: /usr/local/bin/kong stop
+  shell: kong stop
+  when: kong_action == 'kong_stop'
   tags: kong_stop
 
+- name: Start Kong
+  shell: kong start
+  when: kong_action == 'kong_start'
+  tags: kong_start
+
 - name: Restart Kong
-  shell: /usr/local/bin/kong restart
+  shell: kong restart
+  when: kong_action == 'kong_restart'
   tags: kong_restart
