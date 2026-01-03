@@ -5,7 +5,7 @@
   gather_facts: no
 
   vars:
-    kong_admin_url: "http://192.168.64.131:8001"
+    kong_admin_url: "http://192.168.0.126:8001"
     kong_workspace: "default"
     consumer_username: "{{ customer_name }}"
 
