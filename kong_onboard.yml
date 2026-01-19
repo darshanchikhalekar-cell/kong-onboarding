@@ -7,7 +7,9 @@
   vars:
     kong_admin_url: "http://192.168.64.129:8001"
     kong_workspace: "default"
-    consumer_username: "{{ customer_name }}"
+
+    # Survey variable from AWX
+    consumer_username: "{{ consumer_name }}"
 
     kong_headers:
       Kong-Workspace: "{{ kong_workspace }}"
@@ -31,20 +33,34 @@
         body:
           username: "{{ consumer_username }}"
         headers: "{{ kong_headers }}"
+      register: consumer_result
 
-    - name: Create API key (WORKS for new & existing consumers)
+    - name: Create API key (works for new & existing consumers)
       uri:
         url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/key-auth"
         method: POST
         status_code: [201, 409]
         body_format: json
-        body: {}        # <-- THIS IS CRITICAL
+        body: {}
         headers: "{{ kong_headers }}"
       register: key_result
 
-    - name: Onboarding summary
+    - name: Onboarding result summary
       debug:
         msg: |
-          Consumer: {{ consumer_username }}
-          Workspace: {{ kong_workspace }}
-          API Key: {{ 'CREATED' if key_result.status == 201 else 'ALREADY EXISTS' }}
+          ✅ Kong Consumer Onboarding Result
+          ---------------------------------
+          Consumer Name : {{ consumer_username }}
+          Workspace     : {{ kong_workspace }}
+
+          Consumer Status : {{
+            'CREATED successfully'
+            if consumer_result.status == 201
+            else 'ALREADY EXISTS'
+          }}
+
+          API Key Status  : {{
+            'CREATED successfully'
+            if key_result.status == 201
+            else 'ALREADY EXISTS'
+          }}
