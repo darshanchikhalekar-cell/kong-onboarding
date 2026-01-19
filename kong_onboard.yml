@@ -4,6 +4,9 @@
   connection: local
   gather_facts: no
 
+  # 🔴 THIS OVERRIDES AWX "Enable Privilege Escalation"
+  become: false
+
   vars:
     kong_admin_url: "http://192.168.64.129:8001"
     kong_workspace: "default"
@@ -18,6 +21,7 @@
   tasks:
 
     - name: Check Kong Admin API
+      become: false
       uri:
         url: "{{ kong_admin_url }}/status"
         method: GET
@@ -25,6 +29,7 @@
         headers: "{{ kong_headers }}"
 
     - name: Create consumer (safe & idempotent)
+      become: false
       uri:
         url: "{{ kong_admin_url }}/consumers"
         method: POST
@@ -36,6 +41,7 @@
       register: consumer_result
 
     - name: Create API key (works for new & existing consumers)
+      become: false
       uri:
         url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/key-auth"
         method: POST
@@ -46,6 +52,7 @@
       register: key_result
 
     - name: Onboarding result summary
+      become: false
       debug:
         msg: |
           ✅ Kong Consumer Onboarding Result
