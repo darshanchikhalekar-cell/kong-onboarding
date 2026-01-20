@@ -1,6 +1,0 @@
-
-- name: Fetch Kong license
-  fetch:
-    src: "{{ kong_license_path }}"
-    dest: "{{ fetch_dir }}/"
-    flat: yes

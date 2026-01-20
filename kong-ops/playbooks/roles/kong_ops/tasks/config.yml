@@ -1,5 +1,0 @@
-- name: Fetch Kong config
-  fetch:
-    src: "{{ kong_conf_path }}"
-    dest: "{{ fetch_dir }}/"
-    flat: yes
