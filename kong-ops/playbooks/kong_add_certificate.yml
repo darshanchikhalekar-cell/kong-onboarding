@@ -1,0 +1,48 @@
+---
+- name: Add TLS Certificate to Kong
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+
+  vars:
+    kong_admin_url: "http://192.168.64.129:8001"
+
+  tasks:
+
+    - name: Upload certificate to Kong
+      uri:
+        url: "{{ kong_admin_url }}/certificates"
+        method: POST
+        status_code: [201, 409]
+        body_format: json
+        body:
+          cert: "{{ cert_pem }}"
+          key: "{{ key_pem }}"
+          tags:
+            - "{{ cert_name }}"
+        headers:
+          Content-Type: application/json
+      register: cert_result
+
+    - name: Create SNI (optional)
+      uri:
+        url: "{{ kong_admin_url }}/snis"
+        method: POST
+        status_code: [201, 409]
+        body_format: json
+        body:
+          name: "{{ sni_name }}"
+          certificate:
+            id: "{{ cert_result.json.id }}"
+        headers:
+          Content-Type: application/json
+      when: sni_name is defined and sni_name | length > 0
+
+    - name: Certificate upload result
+      debug:
+        msg: |
+          ✅ Certificate operation completed
+          ------------------------------
+          Name : {{ cert_name }}
+          Status : {{ 'CREATED' if cert_result.status == 201 else 'ALREADY EXISTS' }}
