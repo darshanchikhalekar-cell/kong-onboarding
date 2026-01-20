@@ -18,7 +18,7 @@
       changed_when: false
 
     # ============================================================
-    # VALIDATE SURVEY INPUTS (PREVENT FUTURE FAILURES)
+    # VALIDATE SURVEY INPUTS
     # ============================================================
     - name: Validate TLS inputs from survey
       fail:
@@ -37,7 +37,7 @@
         mode: '0755'
 
     # ============================================================
-    # CREATE CERTIFICATE FILES (FROM SURVEY)
+    # CREATE CERTIFICATE FILES
     # ============================================================
     - name: Create TLS certificate file
       copy:
@@ -52,7 +52,7 @@
         mode: '0600'
 
     # ============================================================
-    # ADD TLS CERTIFICATE TO KONG (DEFAULT WORKSPACE)
+    # ADD TLS CERTIFICATE TO KONG
     # ============================================================
     - name: Add TLS certificate to Kong
       command: >
@@ -68,14 +68,14 @@
         msg: "TLS certificate added successfully"
 
     # ============================================================
-    # EXTRACT CERTIFICATE UUID
+    # EXTRACT CERTIFICATE UUID (NO json_query)
     # ============================================================
     - name: Extract certificate UUID
       set_fact:
-        certificate_uuid: "{{ cert_add_output.stdout | from_json | json_query('id') }}"
+        certificate_uuid: "{{ (cert_add_output.stdout | from_json).id }}"
 
     # ============================================================
-    # FINAL RESULT (ENTERPRISE STYLE OUTPUT)
+    # FINAL RESULT
     # ============================================================
     - name: Print certificate result
       debug:
