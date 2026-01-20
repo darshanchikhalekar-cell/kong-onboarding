@@ -1,48 +1,86 @@
 ---
-- name: Add TLS Certificate to Kong
-  hosts: localhost
-  connection: local
+- name: Kong – Add TLS Certificate
+  hosts: all
   gather_facts: false
-  become: false
 
   vars:
-    kong_admin_url: "http://192.168.64.129:8001"
+    kong_admin_url: "http://127.0.0.1:8001"
+    deploy_path: "/tmp/tls_cert_{{ awx_job_id }}"
 
   tasks:
 
-    - name: Upload certificate to Kong
-      uri:
-        url: "{{ kong_admin_url }}/certificates"
-        method: POST
-        status_code: [201, 409]
-        body_format: json
-        body:
-          cert: "{{ cert_pem }}"
-          key: "{{ key_pem }}"
-          tags:
-            - "{{ cert_name }}"
-        headers:
-          Content-Type: application/json
-      register: cert_result
+    # ============================================================
+    # WHO ADDED CERTIFICATE (AUDIT)
+    # ============================================================
+    - name: Get execution user
+      command: whoami
+      register: cert_added_by
+      changed_when: false
 
-    - name: Create SNI (optional)
-      uri:
-        url: "{{ kong_admin_url }}/snis"
-        method: POST
-        status_code: [201, 409]
-        body_format: json
-        body:
-          name: "{{ sni_name }}"
-          certificate:
-            id: "{{ cert_result.json.id }}"
-        headers:
-          Content-Type: application/json
-      when: sni_name is defined and sni_name | length > 0
+    # ============================================================
+    # CREATE TEMP DIRECTORY
+    # ============================================================
+    - name: Create temp directory
+      file:
+        path: "{{ deploy_path }}"
+        state: directory
+        mode: '0755'
 
-    - name: Certificate upload result
+    # ============================================================
+    # CREATE CERT FILES FROM SURVEY
+    # ============================================================
+    - name: Create TLS certificate file
+      copy:
+        content: "{{ tls_cert_pem }}"
+        dest: "{{ deploy_path }}/tls.crt"
+        mode: '0644'
+
+    - name: Create TLS private key file
+      copy:
+        content: "{{ tls_key_pem }}"
+        dest: "{{ deploy_path }}/tls.key"
+        mode: '0600'
+
+    # ============================================================
+    # ADD TLS CERTIFICATE TO KONG (DEFAULT WORKSPACE)
+    # ============================================================
+    - name: Add TLS certificate
+      command: >
+        curl -s -X POST
+        {{ kong_admin_url }}/certificates
+        -F "cert=@{{ deploy_path }}/tls.crt"
+        -F "key=@{{ deploy_path }}/tls.key"
+      register: cert_add_output
+      changed_when: "'id' in cert_add_output.stdout"
+
+    - name: TLS certificate status
       debug:
-        msg: |
-          ✅ Certificate operation completed
-          ------------------------------
-          Name : {{ cert_name }}
-          Status : {{ 'CREATED' if cert_result.status == 201 else 'ALREADY EXISTS' }}
+        msg: "TLS certificate added successfully"
+
+    # ============================================================
+    # EXTRACT CERT UUID
+    # ============================================================
+    - name: Extract certificate UUID
+      set_fact:
+        certificate_uuid: "{{ cert_add_output.stdout | from_json | json_query('id') }}"
+
+    # ============================================================
+    # FINAL RESULT (ENTERPRISE STYLE)
+    # ============================================================
+    - name: Print certificate result
+      debug:
+        msg:
+          - "Certificate UUID: {{ certificate_uuid }}"
+          - "Certificate added by user: {{ cert_added_by.stdout }}"
+
+    # ============================================================
+    # CLEANUP
+    # ============================================================
+    - name: Delete temp directory
+      file:
+        path: "{{ deploy_path }}"
+        state: absent
+
+    - name: Post deployment cleanup
+      debug:
+        msg: "Successful post deployment cleanup from {{ deploy_path }}"
