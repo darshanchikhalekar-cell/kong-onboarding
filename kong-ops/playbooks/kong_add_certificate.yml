@@ -5,17 +5,27 @@
 
   vars:
     kong_admin_url: "http://127.0.0.1:8001"
-    deploy_path: "/tmp/tls_cert_{{ awx_job_id }}"
+    deploy_path: "/tmp/kong_tls_{{ awx_job_id }}"
 
   tasks:
 
     # ============================================================
-    # WHO ADDED CERTIFICATE (AUDIT)
+    # WHO ADDED THE CERTIFICATE
     # ============================================================
     - name: Get execution user
       command: whoami
       register: cert_added_by
       changed_when: false
+
+    # ============================================================
+    # VALIDATE SURVEY INPUTS (PREVENT FUTURE FAILURES)
+    # ============================================================
+    - name: Validate TLS inputs from survey
+      fail:
+        msg: "TLS Certificate or Private Key not provided in survey"
+      when:
+        - tls_certificate is not defined
+        - tls_private_key is not defined
 
     # ============================================================
     # CREATE TEMP DIRECTORY
@@ -27,24 +37,24 @@
         mode: '0755'
 
     # ============================================================
-    # CREATE CERT FILES FROM SURVEY
+    # CREATE CERTIFICATE FILES (FROM SURVEY)
     # ============================================================
     - name: Create TLS certificate file
       copy:
-        content: "{{ tls_cert_pem }}"
+        content: "{{ tls_certificate }}"
         dest: "{{ deploy_path }}/tls.crt"
         mode: '0644'
 
     - name: Create TLS private key file
       copy:
-        content: "{{ tls_key_pem }}"
+        content: "{{ tls_private_key }}"
         dest: "{{ deploy_path }}/tls.key"
         mode: '0600'
 
     # ============================================================
     # ADD TLS CERTIFICATE TO KONG (DEFAULT WORKSPACE)
     # ============================================================
-    - name: Add TLS certificate
+    - name: Add TLS certificate to Kong
       command: >
         curl -s -X POST
         {{ kong_admin_url }}/certificates
@@ -58,14 +68,14 @@
         msg: "TLS certificate added successfully"
 
     # ============================================================
-    # EXTRACT CERT UUID
+    # EXTRACT CERTIFICATE UUID
     # ============================================================
     - name: Extract certificate UUID
       set_fact:
         certificate_uuid: "{{ cert_add_output.stdout | from_json | json_query('id') }}"
 
     # ============================================================
-    # FINAL RESULT (ENTERPRISE STYLE)
+    # FINAL RESULT (ENTERPRISE STYLE OUTPUT)
     # ============================================================
     - name: Print certificate result
       debug:
