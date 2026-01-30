@@ -1,33 +1,36 @@
 ---
-- name: Kong – Add TLS Certificate
+- name: Kong | Add TLS Certificate
   hosts: all
   gather_facts: false
   connection: local
-  become: false
 
   vars:
-    kong_admin_url: "http://{{ inventory_hostname }}:{{ kong_admin_port }}"
+    kong_admin_url: "http://{{ inventory_hostname }}:8001"
     deploy_path: "/tmp/kong_tls_{{ awx_job_id }}"
 
   tasks:
 
     # ============================================================
+    # CAPTURE WHO DEPLOYED (AWX SAFE)
+    # ============================================================
+    - name: Capture execution user
+      set_fact:
+        deployed_by: "{{ awx_user_name | default('unknown') }}"
+
+    # ============================================================
     # VALIDATE SURVEY INPUTS
     # ============================================================
-    - name: Validate TLS inputs
-      delegate_to: localhost
+    - name: Validate TLS survey inputs
       fail:
-        msg: "Certificate Name, Certificate PEM, or Private Key PEM missing"
+        msg: "Certificate PEM or Private Key PEM missing"
       when:
-        - certificate_name is not defined or certificate_name | length == 0
-        - tls_certificate is not defined or tls_certificate | length == 0
-        - tls_private_key is not defined or tls_private_key | length == 0
+        - tls_certificate | default('') | length == 0
+        - tls_private_key | default('') | length == 0
 
     # ============================================================
     # CREATE TEMP DIRECTORY
     # ============================================================
-    - name: Create temp directory
-      delegate_to: localhost
+    - name: Create temporary directory
       file:
         path: "{{ deploy_path }}"
         state: directory
@@ -36,15 +39,13 @@
     # ============================================================
     # WRITE CERT FILES
     # ============================================================
-    - name: Write certificate PEM
-      delegate_to: localhost
+    - name: Write TLS certificate
       copy:
         content: "{{ tls_certificate }}"
         dest: "{{ deploy_path }}/tls.crt"
         mode: '0644'
 
-    - name: Write private key PEM
-      delegate_to: localhost
+    - name: Write TLS private key
       copy:
         content: "{{ tls_private_key }}"
         dest: "{{ deploy_path }}/tls.key"
@@ -54,48 +55,39 @@
     # UPLOAD CERTIFICATE TO KONG
     # ============================================================
     - name: Upload TLS certificate to Kong
-      delegate_to: localhost
       command: >
         curl -s -X POST
         {{ kong_admin_url }}/certificates
         -F "cert=@{{ deploy_path }}/tls.crt"
         -F "key=@{{ deploy_path }}/tls.key"
-        -F "tags={{ certificate_name }}"
       register: cert_add_output
-      failed_when: cert_add_output.stdout is not search('"id"')
+      changed_when: "'id' in cert_add_output.stdout"
 
     # ============================================================
-    # EXTRACT CERT UUID
+    # EXTRACT CERTIFICATE ID
     # ============================================================
-    - name: Extract certificate UUID
-      delegate_to: localhost
+    - name: Extract certificate ID
       set_fact:
-        certificate_uuid: "{{ (cert_add_output.stdout | from_json).id }}"
+        certificate_id: "{{ (cert_add_output.stdout | from_json).id }}"
 
     # ============================================================
-    # FINAL OUTPUT (AWX FRIENDLY)
+    # FINAL USER DISPLAY (CLEAN)
     # ============================================================
-    - name: ✅ TLS Certificate Deployment Result
-      delegate_to: localhost
+    - name: TLS Certificate Deployment Result
       debug:
         msg: |
           =========================================
-          KONG TLS CERTIFICATE DEPLOYMENT
+          KONG TLS CERTIFICATE DEPLOYED
           =========================================
-          Target Kong     : {{ inventory_hostname }}
-          Environment     : {{ group_names | join(', ') }}
-
-          Certificate Name: {{ certificate_name }}
-          Certificate ID  : {{ certificate_uuid }}
-
-          Status          : ✅ SUCCESS
+          Target Kong   : {{ inventory_hostname }}
+          Certificate ID: {{ certificate_id }}
+          Deployed By   : {{ deployed_by }}
           =========================================
 
     # ============================================================
     # CLEANUP
     # ============================================================
-    - name: Cleanup temp files
-      delegate_to: localhost
+    - name: Cleanup temporary files
       file:
         path: "{{ deploy_path }}"
         state: absent
