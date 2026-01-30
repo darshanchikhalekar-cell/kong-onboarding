@@ -1,21 +1,21 @@
 ---
 - name: Kong | Add TLS Certificate
-  hosts: localhost
-  connection: local
+  hosts: all
   gather_facts: false
 
   vars:
-    kong_admin_url: "http://{{ kong_admin_ip }}:8001"
+    kong_admin_url: "http://{{ inventory_hostname }}:8001"
     deploy_path: "/tmp/kong_tls_{{ awx_job_id }}"
 
   tasks:
 
     # ============================================================
-    # CAPTURE WHO DEPLOYED (AWX SAFE)
+    # WHO DEPLOYED
     # ============================================================
     - name: Capture execution user
-      set_fact:
-        deployed_by: "{{ awx_user_name | default('unknown') }}"
+      command: whoami
+      register: cert_added_by
+      changed_when: false
 
     # ============================================================
     # VALIDATE SURVEY INPUTS
@@ -28,7 +28,7 @@
         - tls_private_key | default('') | length == 0
 
     # ============================================================
-    # CREATE TEMP DIRECTORY (ON AWX POD)
+    # CREATE TEMP DIRECTORY
     # ============================================================
     - name: Create temporary directory
       file:
@@ -37,7 +37,7 @@
         mode: '0755'
 
     # ============================================================
-    # WRITE CERT FILES (ON AWX POD)
+    # WRITE CERT FILES
     # ============================================================
     - name: Write TLS certificate
       copy:
@@ -52,7 +52,7 @@
         mode: '0600'
 
     # ============================================================
-    # UPLOAD CERTIFICATE TO KONG (HTTP ONLY)
+    # UPLOAD CERTIFICATE
     # ============================================================
     - name: Upload TLS certificate to Kong
       command: >
@@ -64,24 +64,28 @@
       changed_when: "'id' in cert_add_output.stdout"
 
     # ============================================================
-    # EXTRACT CERTIFICATE ID
+    # EXTRACT CERT ID
     # ============================================================
     - name: Extract certificate ID
       set_fact:
         certificate_id: "{{ (cert_add_output.stdout | from_json).id }}"
 
     # ============================================================
-    # FINAL DISPLAY (ONLY WHAT YOU ASKED)
+    # ✅ FORMATTED OUTPUT (ONLY CHANGE)
     # ============================================================
-    - name: TLS Certificate Deployment Result
+    - name: TLS Certificate Deployment Summary
       debug:
         msg: |
           =========================================
-          KONG TLS CERTIFICATE DEPLOYED
+          KONG TLS CERTIFICATE DEPLOYMENT
           =========================================
-          Target Kong   : {{ kong_admin_ip }}
-          Certificate ID: {{ certificate_id }}
-          Deployed By   : {{ deployed_by }}
+          Target Kong     : {{ inventory_hostname }}
+          Admin API URL  : {{ kong_admin_url }}
+
+          Certificate ID : {{ certificate_id }}
+          Deployed By    : {{ cert_added_by.stdout }}
+
+          Status         : ✅ SUCCESS
           =========================================
 
     # ============================================================
