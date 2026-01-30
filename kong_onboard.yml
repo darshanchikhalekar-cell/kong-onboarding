@@ -1,51 +1,71 @@
 ---
 - name: Create Kong consumer and API key
-  hosts: localhost
-  connection: local
+  hosts: all
   gather_facts: false
+  connection: local
   become: false
 
   vars:
+    kong_admin_url: "http://{{ inventory_hostname }}:{{ kong_admin_port }}"
     kong_workspace: "{{ kong_workspace | default('default') }}"
     consumer_username: "{{ consumer_name }}"
 
+    kong_headers:
+      Kong-Workspace: "{{ kong_workspace }}"
+      Content-Type: application/json
+
   tasks:
 
-    - name: Loop over selected Kong hosts
-      vars:
-        kong_admin_url: "http://{{ item }}:{{ hostvars[item].kong_admin_port }}"
-      loop: "{{ ansible_play_batch }}"
+    - name: Check Kong Admin API
       delegate_to: localhost
-      block:
+      uri:
+        url: "{{ kong_admin_url }}/status"
+        method: GET
+        status_code: 200
+        headers: "{{ kong_headers }}"
 
-        - name: Check Kong Admin API
-          uri:
-            url: "{{ kong_admin_url }}/status"
-            method: GET
-            status_code: 200
-            headers:
-              Kong-Workspace: "{{ kong_workspace }}"
-              Content-Type: application/json
+    - name: Create consumer (idempotent)
+      delegate_to: localhost
+      uri:
+        url: "{{ kong_admin_url }}/consumers"
+        method: POST
+        status_code: [201, 409]
+        body_format: json
+        body:
+          username: "{{ consumer_username }}"
+        headers: "{{ kong_headers }}"
+      register: consumer_result
 
-        - name: Create consumer
-          uri:
-            url: "{{ kong_admin_url }}/consumers"
-            method: POST
-            status_code: [201, 409]
-            body_format: json
-            body:
-              username: "{{ consumer_username }}"
-            headers:
-              Kong-Workspace: "{{ kong_workspace }}"
-              Content-Type: application/json
+    - name: Create API key
+      delegate_to: localhost
+      uri:
+        url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/key-auth"
+        method: POST
+        status_code: [201, 409]
+        body_format: json
+        body: {}
+        headers: "{{ kong_headers }}"
+      register: key_result
 
-        - name: Create API key
-          uri:
-            url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/key-auth"
-            method: POST
-            status_code: [201, 409]
-            body_format: json
-            body: {}
-            headers:
-              Kong-Workspace: "{{ kong_workspace }}"
-              Content-Type: application/json
+    - name: Onboarding result summary
+      delegate_to: localhost
+      debug:
+        msg: |
+          ✅ Kong Consumer Onboarding Result
+          ---------------------------------
+          Target Kong     : {{ inventory_hostname }}
+          Environment     : {{ group_names | join(', ') }}
+          Consumer Name  : {{ consumer_username }}
+          Workspace      : {{ kong_workspace }}
+
+          Consumer Status : {{
+            'CREATED successfully'
+            if consumer_result.status == 201
+            else 'ALREADY EXISTS'
+          }}
+
+          API Key Status  : {{
+            'CREATED successfully'
+            if key_result.status == 201
+            else 'ALREADY EXISTS'
+          }}
