@@ -1,14 +1,12 @@
 ---
 - name: Create Kong consumer and API key
-  hosts: localhost
-  connection: local
-  gather_facts: no
-
-  # 🔴 THIS OVERRIDES AWX "Enable Privilege Escalation"
+  hosts: all
+  gather_facts: false
   become: false
 
   vars:
-    kong_admin_url: "http://192.168.64.129:8001"
+    # Build Kong Admin URL dynamically from inventory host
+    kong_admin_url: "http://{{ inventory_hostname }}:{{ kong_admin_port }}"
     kong_workspace: "default"
 
     # Survey variable from AWX
@@ -21,15 +19,13 @@
   tasks:
 
     - name: Check Kong Admin API
-      become: false
       uri:
         url: "{{ kong_admin_url }}/status"
         method: GET
         status_code: 200
         headers: "{{ kong_headers }}"
 
-    - name: Create consumer (safe & idempotent)
-      become: false
+    - name: Create consumer (idempotent)
       uri:
         url: "{{ kong_admin_url }}/consumers"
         method: POST
@@ -40,8 +36,7 @@
         headers: "{{ kong_headers }}"
       register: consumer_result
 
-    - name: Create API key (works for new & existing consumers)
-      become: false
+    - name: Create API key
       uri:
         url: "{{ kong_admin_url }}/consumers/{{ consumer_username }}/key-auth"
         method: POST
@@ -52,13 +47,14 @@
       register: key_result
 
     - name: Onboarding result summary
-      become: false
       debug:
         msg: |
           ✅ Kong Consumer Onboarding Result
           ---------------------------------
-          Consumer Name : {{ consumer_username }}
-          Workspace     : {{ kong_workspace }}
+          Target Kong     : {{ inventory_hostname }}
+          Environment     : {{ group_names | join(', ') }}
+          Consumer Name  : {{ consumer_username }}
+          Workspace      : {{ kong_workspace }}
 
           Consumer Status : {{
             'CREATED successfully'
