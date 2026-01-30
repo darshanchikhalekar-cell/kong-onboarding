@@ -1,25 +1,20 @@
 ---
 - name: Kong | Add TLS Certificate
-  hosts: all
+  hosts: localhost
+  connection: local
   gather_facts: false
 
   vars:
-    kong_admin_url: "http://{{ inventory_hostname }}:8001"
+    kong_admin_url: "http://{{ target_kong_ip }}:8001"
     deploy_path: "/tmp/kong_tls_{{ awx_job_id }}"
 
   tasks:
 
-    # ============================================================
-    # WHO DEPLOYED
-    # ============================================================
     - name: Capture execution user
       command: whoami
       register: cert_added_by
       changed_when: false
 
-    # ============================================================
-    # VALIDATE SURVEY INPUTS
-    # ============================================================
     - name: Validate TLS survey inputs
       fail:
         msg: "Certificate PEM or Private Key PEM missing"
@@ -27,18 +22,12 @@
         - tls_certificate | default('') | length == 0
         - tls_private_key | default('') | length == 0
 
-    # ============================================================
-    # CREATE TEMP DIRECTORY
-    # ============================================================
     - name: Create temporary directory
       file:
         path: "{{ deploy_path }}"
         state: directory
         mode: '0755'
 
-    # ============================================================
-    # WRITE CERT FILES
-    # ============================================================
     - name: Write TLS certificate
       copy:
         content: "{{ tls_certificate }}"
@@ -51,9 +40,6 @@
         dest: "{{ deploy_path }}/tls.key"
         mode: '0600'
 
-    # ============================================================
-    # UPLOAD CERTIFICATE
-    # ============================================================
     - name: Upload TLS certificate to Kong
       command: >
         curl -s -X POST
@@ -63,24 +49,18 @@
       register: cert_add_output
       changed_when: "'id' in cert_add_output.stdout"
 
-    # ============================================================
-    # EXTRACT CERT ID
-    # ============================================================
     - name: Extract certificate ID
       set_fact:
         certificate_id: "{{ (cert_add_output.stdout | from_json).id }}"
 
-    # ============================================================
-    # ✅ FORMATTED OUTPUT (ONLY CHANGE)
-    # ============================================================
     - name: TLS Certificate Deployment Summary
       debug:
         msg: |
           =========================================
           KONG TLS CERTIFICATE DEPLOYMENT
           =========================================
-          Target Kong     : {{ inventory_hostname }}
-          Admin API URL  : {{ kong_admin_url }}
+          Target Kong IP : {{ target_kong_ip }}
+          Admin API URL : {{ kong_admin_url }}
 
           Certificate ID : {{ certificate_id }}
           Deployed By    : {{ cert_added_by.stdout }}
@@ -88,9 +68,6 @@
           Status         : ✅ SUCCESS
           =========================================
 
-    # ============================================================
-    # CLEANUP
-    # ============================================================
     - name: Cleanup temporary files
       file:
         path: "{{ deploy_path }}"
