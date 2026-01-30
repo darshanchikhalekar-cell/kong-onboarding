@@ -1,11 +1,11 @@
 ---
 - name: Kong | Add TLS Certificate
-  hosts: all
-  gather_facts: false
+  hosts: localhost
   connection: local
+  gather_facts: false
 
   vars:
-    kong_admin_url: "http://{{ inventory_hostname }}:8001"
+    kong_admin_url: "http://{{ kong_admin_ip }}:8001"
     deploy_path: "/tmp/kong_tls_{{ awx_job_id }}"
 
   tasks:
@@ -28,7 +28,7 @@
         - tls_private_key | default('') | length == 0
 
     # ============================================================
-    # CREATE TEMP DIRECTORY
+    # CREATE TEMP DIRECTORY (ON AWX POD)
     # ============================================================
     - name: Create temporary directory
       file:
@@ -37,7 +37,7 @@
         mode: '0755'
 
     # ============================================================
-    # WRITE CERT FILES
+    # WRITE CERT FILES (ON AWX POD)
     # ============================================================
     - name: Write TLS certificate
       copy:
@@ -52,7 +52,7 @@
         mode: '0600'
 
     # ============================================================
-    # UPLOAD CERTIFICATE TO KONG
+    # UPLOAD CERTIFICATE TO KONG (HTTP ONLY)
     # ============================================================
     - name: Upload TLS certificate to Kong
       command: >
@@ -71,7 +71,7 @@
         certificate_id: "{{ (cert_add_output.stdout | from_json).id }}"
 
     # ============================================================
-    # FINAL USER DISPLAY (CLEAN)
+    # FINAL DISPLAY (ONLY WHAT YOU ASKED)
     # ============================================================
     - name: TLS Certificate Deployment Result
       debug:
@@ -79,7 +79,7 @@
           =========================================
           KONG TLS CERTIFICATE DEPLOYED
           =========================================
-          Target Kong   : {{ inventory_hostname }}
+          Target Kong   : {{ kong_admin_ip }}
           Certificate ID: {{ certificate_id }}
           Deployed By   : {{ deployed_by }}
           =========================================
