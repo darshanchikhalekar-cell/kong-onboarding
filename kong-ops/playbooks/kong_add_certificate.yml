@@ -1,46 +1,66 @@
 ---
 - name: Kong | Add TLS Certificate
-  hosts: localhost
-  connection: local
+  hosts: all
   gather_facts: false
+  connection: local
 
   vars:
-    kong_admin_url: "http://{{ target_kong_ip }}:8001"
+    kong_admin_url: "http://{{ inventory_hostname }}:8001"
     deploy_path: "/tmp/kong_tls_{{ awx_job_id }}"
 
   tasks:
 
+    # ============================================================
+    # CAPTURE USER (AWX SAFE – NO SSH)
+    # ============================================================
     - name: Capture execution user
-      command: whoami
-      register: cert_added_by
-      changed_when: false
+      delegate_to: localhost
+      set_fact:
+        deployed_by: "{{ awx_user_name | default('unknown') }}"
 
+    # ============================================================
+    # VALIDATE SURVEY INPUTS
+    # ============================================================
     - name: Validate TLS survey inputs
+      delegate_to: localhost
       fail:
         msg: "Certificate PEM or Private Key PEM missing"
       when:
         - tls_certificate | default('') | length == 0
-        - tls_private_key | default('') | length == 0
+          or tls_private_key | default('') | length == 0
 
+    # ============================================================
+    # CREATE TEMP DIRECTORY (ON AWX POD)
+    # ============================================================
     - name: Create temporary directory
+      delegate_to: localhost
       file:
         path: "{{ deploy_path }}"
         state: directory
         mode: '0755'
 
+    # ============================================================
+    # WRITE CERT FILES (ON AWX POD)
+    # ============================================================
     - name: Write TLS certificate
+      delegate_to: localhost
       copy:
         content: "{{ tls_certificate }}"
         dest: "{{ deploy_path }}/tls.crt"
         mode: '0644'
 
     - name: Write TLS private key
+      delegate_to: localhost
       copy:
         content: "{{ tls_private_key }}"
         dest: "{{ deploy_path }}/tls.key"
         mode: '0600'
 
+    # ============================================================
+    # UPLOAD CERTIFICATE TO KONG (HTTP ONLY)
+    # ============================================================
     - name: Upload TLS certificate to Kong
+      delegate_to: localhost
       command: >
         curl -s -X POST
         {{ kong_admin_url }}/certificates
@@ -49,26 +69,38 @@
       register: cert_add_output
       changed_when: "'id' in cert_add_output.stdout"
 
+    # ============================================================
+    # EXTRACT CERTIFICATE ID
+    # ============================================================
     - name: Extract certificate ID
+      delegate_to: localhost
       set_fact:
         certificate_id: "{{ (cert_add_output.stdout | from_json).id }}"
 
+    # ============================================================
+    # ✅ ONLY CHANGE: FORMATTED OUTPUT
+    # ============================================================
     - name: TLS Certificate Deployment Summary
+      delegate_to: localhost
       debug:
         msg: |
           =========================================
           KONG TLS CERTIFICATE DEPLOYMENT
           =========================================
-          Target Kong IP : {{ target_kong_ip }}
-          Admin API URL : {{ kong_admin_url }}
+          Target Kong     : {{ inventory_hostname }}
+          Admin API URL  : {{ kong_admin_url }}
 
           Certificate ID : {{ certificate_id }}
-          Deployed By    : {{ cert_added_by.stdout }}
+          Deployed By    : {{ deployed_by }}
 
           Status         : ✅ SUCCESS
           =========================================
 
+    # ============================================================
+    # CLEANUP
+    # ============================================================
     - name: Cleanup temporary files
+      delegate_to: localhost
       file:
         path: "{{ deploy_path }}"
         state: absent
