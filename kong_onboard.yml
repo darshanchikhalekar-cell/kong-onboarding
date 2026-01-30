@@ -22,8 +22,10 @@
         method: GET
         status_code: 200
         headers: "{{ kong_headers }}"
+      register: status_check
+      failed_when: status_check.status != 200
 
-    - name: Create consumer (idempotent)
+    - name: Create consumer
       delegate_to: localhost
       uri:
         url: "{{ kong_admin_url }}/consumers"
@@ -34,6 +36,7 @@
           username: "{{ consumer_username }}"
         headers: "{{ kong_headers }}"
       register: consumer_result
+      failed_when: consumer_result.status not in [201, 409]
 
     - name: Create API key
       delegate_to: localhost
@@ -45,26 +48,31 @@
         body: {}
         headers: "{{ kong_headers }}"
       register: key_result
+      failed_when: key_result.status not in [201, 409]
 
-    - name: Onboarding result summary
+    - name: ✅ Kong Consumer Onboarding Summary
       delegate_to: localhost
       debug:
         msg: |
-          ✅ Kong Consumer Onboarding Result
-          ---------------------------------
+          =========================================
+          KONG CONSUMER ONBOARDING – RESULT
+          =========================================
           Target Kong     : {{ inventory_hostname }}
           Environment     : {{ group_names | join(', ') }}
-          Consumer Name  : {{ consumer_username }}
-          Workspace      : {{ kong_workspace }}
+          Workspace       : {{ kong_workspace }}
 
-          Consumer Status : {{
-            'CREATED successfully'
+          Consumer Name   : {{ consumer_username }}
+          Consumer Result : {{
+            'CREATED'
             if consumer_result.status == 201
             else 'ALREADY EXISTS'
           }}
 
-          API Key Status  : {{
-            'CREATED successfully'
+          API Key Result  : {{
+            'CREATED'
             if key_result.status == 201
             else 'ALREADY EXISTS'
           }}
+
+          Status          : ✅ SUCCESS
+          =========================================
