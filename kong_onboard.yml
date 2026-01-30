@@ -7,7 +7,6 @@
 
   vars:
     kong_admin_url: "http://{{ inventory_hostname }}:{{ kong_admin_port }}"
-    kong_workspace: "{{ kong_workspace | default('default') }}"
     consumer_username: "{{ consumer_name }}"
 
     kong_headers:
